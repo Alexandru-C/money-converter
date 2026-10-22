@@ -18,7 +18,7 @@
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="A new Flutter project.">
+  <meta name="description" content="RON, EUR and RSD converter">
 
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
@@ -42,5 +42,18 @@
     * https://docs.flutter.dev/platform-integration/web/initialization
   -->
   <script src="flutter_bootstrap.js" async></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js');
+      // CanvasKit (one of two variants, picked per browser) is not precached,
+      // to keep the cache small. Re-request whatever this page loaded through
+      // the service worker so it stores exactly the variant this phone uses.
+      const recache = () => setTimeout(() => performance
+        .getEntriesByType('resource')
+        .forEach((e) => fetch(e.name).catch(() => {})), 10000);
+      if (navigator.serviceWorker.controller) recache();
+      else navigator.serviceWorker.addEventListener('controllerchange', recache, { once: true });
+    }
+  </script>
 </body>
 </html>

@@ -1,9 +1,26 @@
 #!/bin/bash
 # Builds the web app and publishes it to GitHub Pages (gh-pages branch).
+# --build-only: build into build/web without publishing.
 set -euo pipefail
 cd "$(dirname "$0")"
 
-flutter build web --release --base-href /money-converter/
+# No CDN: CanvasKit is served from our own site so the PWA works offline.
+flutter build web --release --base-href /money-converter/ --no-web-resources-cdn
+
+# Fill in sw.js: precache everything except CanvasKit (see index.html),
+# debug symbols and Flutter's unused service worker.
+files=$(cd build/web && find . -type f \
+  ! -path './canvaskit/*' ! -name '*.symbols' \
+  ! -name sw.js ! -name flutter_service_worker.js ! -name '.*' \
+  | sed 's|^\./||' | sort)
+version=$(cd build/web && find . -type f ! -name sw.js -print0 | sort -z \
+  | xargs -0 shasum | shasum | cut -c1-12)
+list=$(printf '%s\n' "$files" | sed 's/.*/"&"/' | paste -sd, -)
+FILES="[$list]" VERSION="$version" perl -pi -e \
+  's/__VERSION__/$ENV{VERSION}/; s/__FILES__/$ENV{FILES}/' build/web/sw.js
+echo "sw.js version $version, $(printf '%s\n' "$files" | wc -l | tr -d ' ') files precached"
+
+[ "${1:-}" = --build-only ] && exit 0
 
 out=$(mktemp -d)
 trap 'git worktree remove --force "$out" 2>/dev/null || rm -rf "$out"' EXIT
